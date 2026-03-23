@@ -39,7 +39,7 @@ $env:PIPELINE_SAMPLE_SIZE="5000"
 python run_pipeline.py
 ```
 
-## 4) Expected outputs
+## 4) Outputs
 
 - Cleaned dataset: data/processed/covid_tweets_cleaned.csv
 - Similarity ranking: outputs/tweet_similarity_ranking.csv
