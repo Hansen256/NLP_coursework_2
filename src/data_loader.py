@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -44,14 +45,46 @@ def _detect_text_column(df: pd.DataFrame) -> str:
     return best_col
 
 
+def _download_kaggle_dataset_csvs(raw_dir: Path, dataset_handle: str) -> list[Path]:
+    """Download a Kaggle dataset via kagglehub and copy CSVs into raw_dir."""
+    try:
+        import kagglehub
+    except ImportError as exc:
+        raise ImportError(
+            "kagglehub is required for auto-download. Install it with `pip install kagglehub`."
+        ) from exc
+
+    download_root = Path(kagglehub.dataset_download(dataset_handle))
+    csv_files = sorted(download_root.rglob("*.csv"))
+    if not csv_files:
+        raise FileNotFoundError(
+            f"No CSV files found in downloaded dataset path: {download_root}"
+        )
+
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    copied_files: list[Path] = []
+    for csv_path in csv_files:
+        target = raw_dir / csv_path.name
+        shutil.copy2(csv_path, target)
+        copied_files.append(target)
+
+    return copied_files
+
+
 def load_tweets_dataframe(
     raw_dir: Path,
     minimum_rows: int = 1000,
     sample_size: int = 10000,
     random_state: int = 42,
+    auto_download: bool = False,
+    dataset_handle: str = "gpreda/covid19_tweets",
 ) -> tuple[pd.DataFrame, str, Path]:
     """Load a tweet-like CSV dataset, detect text column, and optionally sample rows."""
     csv_files = sorted(raw_dir.rglob("*.csv"))
+    if not csv_files and auto_download:
+        _download_kaggle_dataset_csvs(raw_dir=raw_dir, dataset_handle=dataset_handle)
+        csv_files = sorted(raw_dir.rglob("*.csv"))
+
     if not csv_files:
         raise FileNotFoundError(f"No CSV files found in raw data directory: {raw_dir}")
 
